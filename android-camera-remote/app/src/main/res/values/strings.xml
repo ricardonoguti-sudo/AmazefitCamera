@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Camera Remote</string>
+    <string name="status_waiting">Aguardando o Active 2 Square</string>
+    <string name="capture_photo">TIRAR FOTO</string>
+    <string name="use_front_camera">USAR CÂMERA FRONTAL</string>
+    <string name="controls_hint">Controle remoto conectado • toque no preview para focar</string>
+</resources>

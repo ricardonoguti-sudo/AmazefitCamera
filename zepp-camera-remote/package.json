@@ -1,0 +1,8 @@
+{
+  "name": "zepp-camera-remote",
+  "private": true,
+  "version": "0.6.0",
+  "dependencies": {
+    "@zeppos/zml": "^0.0.9"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "configVersion": "v3",
+  "defaultLanguage": "pt-BR",
+  "runtime": {
+    "apiVersion": {
+      "compatible": "4.0",
+      "target": "4.0",
+      "minVersion": "4.0"
+    }
+  },
+  "app": {
+    "appId": 25027,
+    "appName": "Camera Remote",
+    "appType": "app",
+    "version": {
+      "code": 6,
+      "name": "0.6.0"
+    },
+    "icon": "icon.png",
+    "vender": "Projeto pessoal",
+    "description": "Disparador remoto de câmera para Amazfit Active 2 Square"
+  },
+  "permissions": [],
+  "targets": {
+    "default": {
+      "module": {
+        "page": {
+          "pages": ["page/index"]
+        },
+        "app-side": {
+          "path": "app-side/index"
+        }
+      },
+      "platforms": [
+        {
+          "name": "Amazfit Active 2 Square",
+          "st": "s",
+          "dw": 390
+        }
+      ],
+      "designWidth": 390
+    }
+  },
+  "i18n": {
+    "en-US": {
+      "appName": "Camera Remote"
+    },
+    "pt-BR": {
+      "appName": "Câmera Remota"
+    }
+  }
+}

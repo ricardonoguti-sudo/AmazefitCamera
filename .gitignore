@@ -1,0 +1,14 @@
+# Sistema operacional e IDE
+.DS_Store
+.idea/
+*.iml
+
+# Android/Gradle
+.gradle/
+build/
+**/build/
+local.properties
+
+# Node/npm
+**/node_modules/
+npm-debug.log*
