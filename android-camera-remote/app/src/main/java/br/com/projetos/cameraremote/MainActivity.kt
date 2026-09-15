@@ -42,6 +42,9 @@ class MainActivity : AppCompatActivity() {
     private var commandServer: LocalCommandServer? = null
     private var isCapturing = false
     private var pendingCapture: Runnable? = null
+    private var pendingCaptureCompletion: ((LocalCommandServer.CaptureResult) -> Unit)? = null
+    @Volatile
+    private var isActivityStarted = false
     private val mainHandler = Handler(Looper.getMainLooper())
     private var lensFacing = CameraSelector.LENS_FACING_BACK
 
@@ -130,6 +133,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        isActivityStarted = true
         commandServer?.start()
         if (!isCapturing && pendingCapture == null && imageCapture != null) {
             setControlsEnabled(true)
@@ -137,42 +141,58 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
+        isActivityStarted = false
         cancelPendingCapture()
         commandServer?.stop()
         super.onStop()
     }
 
-    private fun onCommand(command: String, delaySeconds: Int) {
+    private fun onCommand(
+        command: String,
+        delaySeconds: Int,
+        completion: (LocalCommandServer.CaptureResult) -> Unit,
+    ) {
         runOnUiThread {
+            if (!isActivityStarted) {
+                completion(LocalCommandServer.CaptureResult(false, "O app não está em primeiro plano"))
+                return@runOnUiThread
+            }
             showStatus(if (delaySeconds > 0) {
                 "Comando recebido • foto em ${delaySeconds}s"
             } else {
                 "Comando recebido: $command"
             })
-            schedulePhoto(delaySeconds)
+            schedulePhoto(delaySeconds, completion)
         }
     }
 
-    private fun schedulePhoto(delaySeconds: Int) {
+    private fun schedulePhoto(
+        delaySeconds: Int,
+        completion: (LocalCommandServer.CaptureResult) -> Unit,
+    ) {
         if (imageCapture == null) {
             showStatus("Câmera ainda não está pronta")
+            completion(LocalCommandServer.CaptureResult(false, "Câmera ainda não está pronta"))
             return
         }
         if (pendingCapture != null) {
             showStatus("Já existe uma foto temporizada aguardando")
+            completion(LocalCommandServer.CaptureResult(false, "Já existe uma foto temporizada aguardando"))
             return
         }
         if (delaySeconds <= 0) {
-            takePhoto()
+            takePhoto(completion)
             return
         }
 
         setControlsEnabled(false)
         val capture = Runnable {
             pendingCapture = null
-            takePhoto()
+            pendingCaptureCompletion = null
+            takePhoto(completion)
         }
         pendingCapture = capture
+        pendingCaptureCompletion = completion
         mainHandler.postDelayed(capture, delaySeconds * 1_000L)
         showStatus("Foto em ${delaySeconds}s…")
     }
@@ -180,6 +200,10 @@ class MainActivity : AppCompatActivity() {
     private fun cancelPendingCapture() {
         pendingCapture?.let(mainHandler::removeCallbacks)
         pendingCapture = null
+        pendingCaptureCompletion?.invoke(
+            LocalCommandServer.CaptureResult(false, "Captura cancelada porque o app saiu de primeiro plano")
+        )
+        pendingCaptureCompletion = null
     }
 
     private fun startCamera() {
@@ -244,13 +268,15 @@ class MainActivity : AppCompatActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
 
-    private fun takePhoto() {
+    private fun takePhoto(completion: (LocalCommandServer.CaptureResult) -> Unit = {}) {
         val capture = imageCapture ?: run {
             showStatus("Câmera ainda não está pronta")
+            completion(LocalCommandServer.CaptureResult(false, "Câmera ainda não está pronta"))
             return
         }
         if (isCapturing) {
             showStatus("Captura em andamento…")
+            completion(LocalCommandServer.CaptureResult(false, "Captura em andamento"))
             return
         }
 
@@ -272,8 +298,9 @@ class MainActivity : AppCompatActivity() {
             override fun onImageSaved(result: ImageCapture.OutputFileResults) {
                 isCapturing = false
                 setControlsEnabled(true)
-                showStatus("Foto salva • aguardando comando")
+                showStatus("Foto salva com sucesso")
                 Toast.makeText(this@MainActivity, "Foto salva na galeria", Toast.LENGTH_SHORT).show()
+                completion(LocalCommandServer.CaptureResult(true, "Foto salva"))
             }
 
             override fun onError(exception: ImageCaptureException) {
@@ -281,6 +308,7 @@ class MainActivity : AppCompatActivity() {
                 setControlsEnabled(true)
                 showStatus("Erro ao salvar foto")
                 Toast.makeText(this@MainActivity, exception.message ?: "Erro", Toast.LENGTH_SHORT).show()
+                completion(LocalCommandServer.CaptureResult(false, exception.message ?: "Erro ao salvar foto"))
             }
         })
     }

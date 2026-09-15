@@ -6,6 +6,7 @@ Miniapp para o Amazfit Active 2 Square (Zepp OS / API compatível 4.0).
 
 - Toque no botão no relógio.
 - O miniapp envia o comando `TAKE_PHOTO` ao Side Service.
+- O telefone mantém a resposta pendente até a captura terminar; o relógio exibe **FOTO SALVA** e vibra quando a imagem é gravada.
 - O Side Service encaminha um POST para o app Android em `http://127.0.0.1:8765/command`.
 - O seletor **TEMPORIZADOR** oferece diretamente foto imediata e atrasos de 3, 5 ou 10 segundos.
 - Toques repetidos são ignorados durante o envio, e o botão só confirma sucesso quando o Android responde com HTTP 2xx.

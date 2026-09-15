@@ -10,6 +10,8 @@ Amazfit Active 2 → miniapp Zepp OS → Side Service → HTTP local → app And
 
 Ao tocar em **TIRAR FOTO** no relógio, o miniapp envia `TAKE_PHOTO`. O app Android escuta `127.0.0.1:8765/command`, captura a imagem e salva em `Pictures/AmazfitRemote`. O temporizador oferece captura imediata ou atrasos de 3, 5 e 10 segundos.
 
+O relógio exibe **FOTO SALVA** e vibra somente após o CameraX confirmar que a imagem foi gravada. Falhas na captura são devolvidas ao relógio como erro.
+
 ## Estrutura
 
 - [`android-camera-remote/`](android-camera-remote/) — aplicativo Android em Kotlin com CameraX.

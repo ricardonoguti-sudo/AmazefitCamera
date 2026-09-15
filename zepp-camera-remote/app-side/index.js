@@ -2,7 +2,7 @@ import { BaseSideService } from '@zeppos/zml/base-side'
 import { TAKE_PHOTO } from '../shared/protocol'
 
 const ANDROID_ENDPOINT = 'http://127.0.0.1:8765/command'
-const REQUEST_TIMEOUT = 8000
+const REQUEST_TIMEOUT = 70000
 
 AppSideService(BaseSideService({
   async onRequest(req, res) {

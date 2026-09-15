@@ -7,13 +7,22 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketException
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import org.json.JSONObject
 import kotlin.concurrent.thread
 
 class LocalCommandServer(
     private val port: Int,
-    private val onCommand: (String, Int) -> Unit,
+    private val onCommand: (String, Int, (CaptureResult) -> Unit) -> Unit,
 ) {
+    data class CaptureResult(val saved: Boolean, val message: String)
+
+    companion object {
+        private const val CAPTURE_TIMEOUT_MS = 30_000L
+    }
+
     @Volatile
     private var serverSocket: ServerSocket? = null
     @Volatile
@@ -111,8 +120,23 @@ class LocalCommandServer(
             if (method == "POST" && path == "/command" &&
                 (commandName == "TAKE_PHOTO" || bodyText.contains("TAKE_PHOTO"))
             ) {
-                onCommand("TAKE_PHOTO", delaySeconds)
-                writeResponse(client, 200, "OK")
+                val completed = CountDownLatch(1)
+                val result = AtomicReference<CaptureResult?>()
+                onCommand("TAKE_PHOTO", delaySeconds) { captureResult ->
+                    if (result.compareAndSet(null, captureResult)) completed.countDown()
+                }
+                val timeoutMs = delaySeconds * 1_000L + CAPTURE_TIMEOUT_MS
+                if (!completed.await(timeoutMs, TimeUnit.MILLISECONDS)) {
+                    writeResponse(client, 504, "Capture timed out")
+                    return
+                }
+
+                val captureResult = result.get()
+                if (captureResult?.saved == true) {
+                    writeResponse(client, 200, "PHOTO_SAVED")
+                } else {
+                    writeResponse(client, 500, captureResult?.message ?: "Capture failed")
+                }
             } else if (path != "/command") {
                 writeResponse(client, 404, "Not Found")
             } else {
@@ -125,6 +149,8 @@ class LocalCommandServer(
         val reason = when (statusCode) {
             200 -> "OK"
             404 -> "Not Found"
+            500 -> "Internal Server Error"
+            504 -> "Gateway Timeout"
             else -> "Bad Request"
         }
         val bodyBytes = body.toByteArray(StandardCharsets.UTF_8)

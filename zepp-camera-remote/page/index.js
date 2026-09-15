@@ -1,15 +1,17 @@
 import { createWidget, widget, align, prop } from '@zos/ui'
+import { Vibrator, VIBRATOR_SCENE_NOTIFICATION } from '@zos/sensor'
 import { BasePage } from '@zeppos/zml/base-page'
 import { commandPayload, TAKE_PHOTO, TIMER_OPTIONS } from '../shared/protocol'
 
 const BUTTON_LABEL = 'TIRAR FOTO'
-const REQUEST_TIMEOUT = 8000
+const REQUEST_TIMEOUT = 70000
 
 Page(BasePage({
   state: {
     button: null,
     timerButtons: [],
     statusWidget: null,
+    vibrator: null,
     resetTimer: null,
     requestInFlight: false,
     destroyed: false,
@@ -18,6 +20,7 @@ Page(BasePage({
 
   build() {
     this.state.destroyed = false
+    this.state.vibrator = new Vibrator()
     createWidget(widget.TEXT, {
       x: 20,
       y: 42,
@@ -76,7 +79,7 @@ Page(BasePage({
     const finishRequest = (text, delay) => {
       if (this.state.destroyed) return
       setButtonText(text)
-      setStatus(text, text === 'FOTO ENVIADA' ? 0x34e073 : 0xff6b6b)
+      setStatus(text, text === 'FOTO SALVA' ? 0x34e073 : 0xff6b6b)
       if (this.state.resetTimer) clearTimeout(this.state.resetTimer)
       this.state.resetTimer = setTimeout(() => {
         setButtonText(captureLabel())
@@ -136,7 +139,12 @@ Page(BasePage({
         if (!result || result.result !== true) {
           throw new Error('O telefone recusou o comando')
         }
-        finishRequest('FOTO ENVIADA', 1200)
+        try {
+          this.state.vibrator.start({ mode: VIBRATOR_SCENE_NOTIFICATION })
+        } catch (_) {
+          // A captura já foi confirmada; falha no feedback tátil não altera o resultado.
+        }
+        finishRequest('FOTO SALVA', 1200)
       }).catch(() => finishRequest('ERRO', 1800))
     }
 
@@ -201,6 +209,8 @@ Page(BasePage({
     this.state.button = null
     this.state.timerButtons = []
     this.state.statusWidget = null
+    if (this.state.vibrator) this.state.vibrator.stop()
+    this.state.vibrator = null
     this.state.requestInFlight = false
   },
 }))
